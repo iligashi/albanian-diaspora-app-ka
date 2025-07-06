@@ -13,11 +13,11 @@
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
@@ -29,14 +29,6 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -64,14 +56,6 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -84,33 +68,31 @@
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* Custom styles for the Albanian Diaspora app */
+.gradient-bg {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.dark ::-webkit-scrollbar-track {
-  background: #374151;
+.dark .glass-effect {
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #dc2626;
-  border-radius: 3px;
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #b91c1c;
-}
-
-/* Custom animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -118,140 +100,113 @@
   }
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
 .slide-in {
   animation: slideIn 0.3s ease-out;
 }
 
-.pulse-animation {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
-/* Form focus styles */
-.form-input:focus {
-  @apply ring-2 ring-red-500 border-red-500;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Button hover effects */
-.btn-primary {
-  @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
 }
 
-.btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-200;
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
 }
 
-/* Card hover effects */
-.card-hover {
-  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
-}
-
-/* Status indicators */
-.status-pending {
-  @apply bg-yellow-100 text-yellow-800;
-}
-
-.status-completed {
-  @apply bg-green-100 text-green-800;
-}
-
-.status-failed {
-  @apply bg-red-100 text-red-800;
-}
-
-.status-processing {
-  @apply bg-blue-100 text-blue-800;
-}
-
-/* Dark mode status indicators */
-.dark .status-pending {
-  @apply bg-yellow-900/20 text-yellow-400;
-}
-
-.dark .status-completed {
-  @apply bg-green-900/20 text-green-400;
-}
-
-.dark .status-failed {
-  @apply bg-red-900/20 text-red-400;
-}
-
-.dark .status-processing {
-  @apply bg-blue-900/20 text-blue-400;
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }
 
 /* Loading spinner */
 .spinner {
-  @apply animate-spin rounded-full border-2 border-gray-300 border-t-red-600;
+  border: 2px solid hsl(var(--muted));
+  border-top: 2px solid hsl(var(--primary));
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
 }
 
-/* Notification styles */
-.notification-enter {
-  opacity: 0;
-  transform: translateX(100%);
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.notification-enter-active {
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 300ms, transform 300ms;
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
 }
 
-.notification-exit {
-  opacity: 1;
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-.notification-exit-active {
-  opacity: 0;
-  transition: opacity 300ms;
+.dark .card-hover:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-/* Chart animations */
-.chart-bar {
-  transition: width 0.5s ease-in-out;
+/* Button loading state */
+.btn-loading {
+  position: relative;
+  color: transparent;
 }
 
-/* File upload styles */
-.file-upload-area {
-  @apply border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer transition-colors;
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.file-upload-area:hover {
-  @apply border-gray-400 bg-gray-50;
+/* Status indicators */
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
 }
 
-.file-upload-area.drag-over {
-  @apply border-blue-500 bg-blue-50;
+.status-completed {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.status-failed {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+.status-processing {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
 }
 
 /* Mobile responsive utilities */
 @media (max-width: 640px) {
-  .mobile-hidden {
-    display: none;
+  .mobile-full {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
   }
 }
 
@@ -262,44 +217,6 @@
   }
 
   .print-break {
-    page-break-before: always;
-  }
-}
-
-/* Accessibility improvements */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Focus styles for better accessibility */
-.focus-visible:focus {
-  @apply outline-none ring-2 ring-red-500 ring-offset-2;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .btn-primary {
-    @apply border-2 border-black;
-  }
-
-  .card-hover {
-    @apply border-2 border-gray-800;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    page-break-after: always;
   }
 }
