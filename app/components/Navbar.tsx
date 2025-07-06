@@ -58,7 +58,7 @@ export default function Navbar() {
               <div className="h-8 w-8 bg-red-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">A</span>
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">Albanian Diaspora</span>
+              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">Diaspora</span>
             </Link>
           </div>
 
