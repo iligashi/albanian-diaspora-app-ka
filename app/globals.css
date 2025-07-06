@@ -29,6 +29,14 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -56,6 +64,14 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -79,142 +95,45 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.dark .glass-effect {
-  background: rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.hover-lift {
+  transition: transform 0.2s ease-in-out;
 }
 
-/* Animation classes */
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out;
+.hover-lift:hover {
+  transform: translateY(-2px);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
+/* Loading animations */
+@keyframes pulse {
+  0%,
+  100% {
     opacity: 1;
-    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
-.slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
+  background: #f1f1f1;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 4px;
+  background: #dc2626;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
-}
-
-/* Loading spinner */
-.spinner {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #dc2626;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Card hover effects */
-.card-hover {
-  transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.dark .card-hover:hover {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-}
-
-/* Button loading state */
-.btn-loading {
-  position: relative;
-  color: transparent;
-}
-
-.btn-loading::after {
-  content: "";
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  top: 50%;
-  left: 50%;
-  margin-left: -8px;
-  margin-top: -8px;
-  border: 2px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* Status indicators */
-.status-pending {
-  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
-}
-
-.status-completed {
-  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
-}
-
-.status-failed {
-  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
-}
-
-.status-processing {
-  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
-}
-
-/* Mobile responsive utilities */
-@media (max-width: 768px) {
-  .mobile-full {
-    width: 100%;
-  }
-
-  .mobile-hidden {
-    display: none;
-  }
+  background: #991b1b;
 }
 
 /* Print styles */
@@ -224,43 +143,81 @@
   }
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .card {
-    border: 2px solid;
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+/* Focus styles for accessibility */
+.focus-visible:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
 }
 
-/* PWA specific styles */
-.pwa-install-prompt {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
+/* Custom button styles */
+.btn-primary {
+  @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-md transition-colors duration-200;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Status indicators */
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.status-processing {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.status-completed {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.status-failed {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+/* Form styles */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500;
+}
+
+.form-error {
+  @apply text-sm text-red-600;
 }
 
 /* Notification styles */
-.notification-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #dc2626;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
+.notification-success {
+  @apply bg-green-50 border-green-200 text-green-800;
+}
+
+.notification-error {
+  @apply bg-red-50 border-red-200 text-red-800;
+}
+
+.notification-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+}
+
+.notification-info {
+  @apply bg-blue-50 border-blue-200 text-blue-800;
 }
