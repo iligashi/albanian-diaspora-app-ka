@@ -1,18 +1,18 @@
 import mongoose from "mongoose"
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/diaspora_app"
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/albanian-diaspora"
 
 if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable")
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local")
 }
 
-let cached = (global as any).mongoose
+let cached = global.mongoose
 
 if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null }
+  cached = global.mongoose = { conn: null, promise: null }
 }
 
-export async function connectDB() {
+async function connectDB() {
   if (cached.conn) {
     return cached.conn
   }
@@ -23,6 +23,7 @@ export async function connectDB() {
     }
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log("✅ Connected to MongoDB")
       return mongoose
     })
   }
@@ -36,3 +37,5 @@ export async function connectDB() {
 
   return cached.conn
 }
+
+export { connectDB }

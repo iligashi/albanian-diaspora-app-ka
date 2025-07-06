@@ -4,14 +4,18 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { useAuth } from "../contexts/AuthContext"
 import Navbar from "../components/Navbar"
-import { User, Save, Eye, EyeOff, Plus, X, Edit } from "lucide-react"
+import { User, Save, Eye, EyeOff, Plus, X, Edit, MessageCircle, Send, CreditCard } from "lucide-react"
 import toast from "react-hot-toast"
 
 interface FamilyMember {
+  _id: string
   name: string
   relationship: string
   phone: string
   address: string
+  email?: string
+  isRegistered: boolean
+  userId?: string
 }
 
 export default function ProfilePage() {
@@ -22,6 +26,10 @@ export default function ProfilePage() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
+  const [showChatModal, setShowChatModal] = useState(false)
+  const [showSendMoneyModal, setShowSendMoneyModal] = useState(false)
+  const [showSendGiftModal, setShowSendGiftModal] = useState(false)
 
   const {
     register,
@@ -42,6 +50,13 @@ export default function ProfilePage() {
     handleSubmit: handleFamilySubmit,
     reset: resetFamily,
     formState: { errors: familyErrors },
+  } = useForm()
+
+  const {
+    register: registerMoney,
+    handleSubmit: handleMoneySubmit,
+    reset: resetMoney,
+    formState: { errors: moneyErrors },
   } = useForm()
 
   useEffect(() => {
@@ -91,23 +106,108 @@ export default function ProfilePage() {
   }
 
   const onSubmitFamily = async (data: any) => {
-    const newMember: FamilyMember = {
-      name: data.name,
-      relationship: data.relationship,
-      phone: data.phone,
-      address: data.address,
-    }
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/family", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
 
-    setFamilyMembers([...familyMembers, newMember])
-    setShowFamilyForm(false)
-    resetFamily()
-    toast.success("Family member added successfully!")
+      if (response.ok) {
+        const result = await response.json()
+        setFamilyMembers([...familyMembers, result.familyMember])
+        setShowFamilyForm(false)
+        resetFamily()
+        toast.success("Family member added successfully!")
+      } else {
+        toast.error("Failed to add family member")
+      }
+    } catch (error) {
+      console.error("Add family member error:", error)
+      toast.error("Failed to add family member")
+    }
   }
 
-  const removeFamilyMember = (index: number) => {
-    const updatedMembers = familyMembers.filter((_, i) => i !== index)
-    setFamilyMembers(updatedMembers)
-    toast.success("Family member removed")
+  const removeFamilyMember = async (memberId: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/family?id=${memberId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setFamilyMembers(result.familyMembers)
+        toast.success("Family member removed")
+      } else {
+        toast.error("Failed to remove family member")
+      }
+    } catch (error) {
+      console.error("Remove family member error:", error)
+      toast.error("Failed to remove family member")
+    }
+  }
+
+  const handleSendMoney = async (data: any) => {
+    if (!selectedMember) return
+
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/family/${selectedMember._id}/send-money`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        toast.success("Money transfer initiated successfully!")
+        setShowSendMoneyModal(false)
+        resetMoney()
+      } else {
+        const error = await response.json()
+        toast.error(error.message || "Failed to send money")
+      }
+    } catch (error) {
+      console.error("Send money error:", error)
+      toast.error("Failed to send money")
+    }
+  }
+
+  const handleSendGift = async (data: any) => {
+    if (!selectedMember) return
+
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/family/${selectedMember._id}/send-gift`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        toast.success("Gift created successfully!")
+        setShowSendGiftModal(false)
+      } else {
+        const error = await response.json()
+        toast.error(error.message || "Failed to create gift")
+      }
+    } catch (error) {
+      console.error("Send gift error:", error)
+      toast.error("Failed to create gift")
+    }
   }
 
   if (!user) {
@@ -142,9 +242,16 @@ export default function ProfilePage() {
                     {user.firstName} {user.lastName}
                   </h1>
                   <p className="text-gray-600">{user.email}</p>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                    {user.role}
-                  </span>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                      {user.role}
+                    </span>
+                    {user.isPremium && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Premium
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex space-x-3">
@@ -352,18 +459,63 @@ export default function ProfilePage() {
             </div>
             <div className="p-6">
               {familyMembers.length > 0 ? (
-                <div className="space-y-4">
-                  {familyMembers.map((member, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900">{member.name}</h4>
-                        <p className="text-sm text-gray-600">{member.relationship}</p>
-                        <p className="text-sm text-gray-500">{member.phone}</p>
-                        <p className="text-sm text-gray-500">{member.address}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {familyMembers.map((member) => (
+                    <div key={member._id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-900">{member.name}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{member.relationship}</p>
+                          <p className="text-sm text-gray-500">{member.phone}</p>
+                          <p className="text-sm text-gray-500">{member.address}</p>
+                          {member.email && <p className="text-sm text-gray-500">{member.email}</p>}
+                          {member.isRegistered && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-2">
+                              Registered User
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeFamilyMember(member._id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button onClick={() => removeFamilyMember(index)} className="text-red-600 hover:text-red-800">
-                        <X className="h-4 w-4" />
-                      </button>
+
+                      {/* Action Buttons */}
+                      <div className="mt-4 flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedMember(member)
+                            setShowChatModal(true)
+                          }}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          <MessageCircle className="h-3 w-3 mr-1" />
+                          Chat
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMember(member)
+                            setShowSendMoneyModal(true)
+                          }}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          Send Money
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMember(member)
+                            setShowSendGiftModal(true)
+                          }}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Send Gift
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -507,6 +659,16 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">Email (Optional)</label>
+                    <input
+                      {...registerFamily("email")}
+                      type="email"
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Email address"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Address</label>
                     <textarea
                       {...registerFamily("address")}
@@ -532,6 +694,137 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Send Money Modal */}
+          {showSendMoneyModal && selectedMember && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Send Money to {selectedMember.name}</h3>
+                  <button onClick={() => setShowSendMoneyModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleMoneySubmit(handleSendMoney)} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Amount</label>
+                    <input
+                      {...registerMoney("amount", { required: "Amount is required" })}
+                      type="number"
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter amount"
+                    />
+                    {moneyErrors.amount && <p className="mt-1 text-sm text-red-600">{moneyErrors.amount.message}</p>}
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowSendMoneyModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                    >
+                      Send Money
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Send Gift Modal */}
+          {showSendGiftModal && selectedMember && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Send Gift to {selectedMember.name}</h3>
+                  <button onClick={() => setShowSendGiftModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit(handleSendGift)} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Gift Description</label>
+                    <textarea
+                      {...register("giftDescription", { required: "Gift description is required" })}
+                      rows={2}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter gift description"
+                    />
+                    {errors.giftDescription && (
+                      <p className="mt-1 text-sm text-red-600">{errors.giftDescription.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowSendGiftModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                    >
+                      Send Gift
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Chat Modal */}
+          {showChatModal && selectedMember && (
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Chat with {selectedMember.name}</h3>
+                  <button onClick={() => setShowChatModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Message</label>
+                    <textarea
+                      {...register("message", { required: "Message is required" })}
+                      rows={4}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter your message"
+                    />
+                    {errors.message && <p className="mt-1 text-sm text-red-600">{errors.message.message}</p>}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowChatModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                    >
+                      Send Message
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

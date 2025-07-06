@@ -11,12 +11,14 @@ const paymentSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
+    phone: String,
     address: {
       type: String,
       required: true,
     },
-    phone: String,
-    relationship: String,
+    familyMemberId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
   },
   billType: {
     type: String,
@@ -34,27 +36,60 @@ const paymentSchema = new mongoose.Schema({
     default: "EUR",
   },
   description: String,
-  accountNumber: String,
-  referenceNumber: String,
+  paymentMethod: {
+    type: String,
+    enum: ["card", "bank_transfer", "paypal", "stripe"],
+    default: "card",
+  },
   status: {
     type: String,
     enum: ["pending", "processing", "completed", "failed", "cancelled"],
     default: "pending",
   },
-  paymentMethod: {
+  transactionId: {
     type: String,
-    enum: ["card", "bank_transfer", "paypal"],
-    required: true,
+    unique: true,
   },
-  transactionId: String,
-  receiptUrl: String,
-  scheduledDate: Date,
+  stripePaymentIntentId: String,
+  paymentDate: Date,
   completedAt: Date,
   failureReason: String,
+  fees: {
+    type: Number,
+    default: 0,
+  },
+  netAmount: Number,
+  receipt: {
+    url: String,
+    filename: String,
+  },
+  notes: String,
   createdAt: {
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 })
+
+// Generate transaction ID before saving
+paymentSchema.pre("save", function (next) {
+  if (!this.transactionId) {
+    this.transactionId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+  }
+
+  // Calculate net amount (amount - fees)
+  this.netAmount = this.amount - (this.fees || 0)
+
+  this.updatedAt = new Date()
+  next()
+})
+
+// Index for better query performance
+paymentSchema.index({ user: 1, createdAt: -1 })
+paymentSchema.index({ status: 1 })
+paymentSchema.index({ transactionId: 1 })
 
 export default mongoose.models.Payment || mongoose.model("Payment", paymentSchema)
