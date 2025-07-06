@@ -12,7 +12,10 @@ const giftSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
-      phone: String,
+      phone: {
+        type: String,
+        default: "",
+      },
       address: {
         type: String,
         required: true,
@@ -24,18 +27,23 @@ const giftSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["flowers", "cakes", "food", "electronics", "clothing", "other"],
+      enum: ["flowers", "cakes", "food", "electronics", "clothing", "books", "toys", "other"],
+      default: "other",
     },
     item: {
       name: {
         type: String,
         required: true,
       },
-      description: String,
+      description: {
+        type: String,
+        default: "",
+      },
       price: {
         type: Number,
         required: true,
         min: 0,
+        default: 0,
       },
     },
     quantity: {
@@ -48,13 +56,18 @@ const giftSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+      default: 0,
     },
     message: {
-      text: String,
+      text: {
+        type: String,
+        default: "",
+      },
     },
     deliveryDate: {
       type: Date,
       required: true,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     },
     status: {
       type: String,
@@ -69,16 +82,25 @@ const giftSchema = new mongoose.Schema(
     trackingNumber: {
       type: String,
       unique: true,
+      sparse: true,
     },
-    stripePaymentIntentId: String,
-    deliveredAt: Date,
+    stripePaymentIntentId: {
+      type: String,
+      default: "",
+    },
+    deliveredAt: {
+      type: Date,
+    },
     review: {
       rating: {
         type: Number,
         min: 1,
         max: 5,
       },
-      comment: String,
+      comment: {
+        type: String,
+        default: "",
+      },
       createdAt: {
         type: Date,
         default: Date.now,
@@ -89,5 +111,11 @@ const giftSchema = new mongoose.Schema(
     timestamps: true,
   },
 )
+
+// Add indexes for better performance
+giftSchema.index({ user: 1, createdAt: -1 })
+giftSchema.index({ status: 1 })
+giftSchema.index({ category: 1 })
+giftSchema.index({ trackingNumber: 1 })
 
 export default mongoose.models.Gift || mongoose.model("Gift", giftSchema)

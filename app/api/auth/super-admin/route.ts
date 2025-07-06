@@ -1,94 +1,121 @@
 import { type NextRequest, NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { connectDB } from "@/lib/mongodb"
-import User from "@/models/User"
 import AdminLog from "@/models/AdminLog"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Super admin login attempt...")
+    console.log("Super admin login attempt started")
 
-    await connectDB()
-    console.log("Database connected")
+    const { username, password } = await request.json()
+    console.log("Login attempt for username:", username)
 
-    const body = await request.json()
-    console.log("Request body:", { username: body.username, hasPassword: !!body.password })
+    if (!username || !password) {
+      console.log("Missing username or password")
+      return NextResponse.json({ message: "Username and password are required" }, { status: 400 })
+    }
 
-    const { username, password } = body
+    // Check environment variables
+    const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || "admin"
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || "admin"
+    const jwtSecret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production"
 
-    // Check super admin credentials
-    const expectedUsername = process.env.SUPER_ADMIN_USERNAME || "admin"
-    const expectedPassword = process.env.SUPER_ADMIN_PASSWORD || "admin"
+    console.log("Expected username:", superAdminUsername)
+    console.log("JWT Secret exists:", !!jwtSecret)
 
-    console.log("Expected credentials:", { username: expectedUsername, password: expectedPassword })
-    console.log("Provided credentials:", { username, password })
-
-    if (username !== expectedUsername || password !== expectedPassword) {
-      console.log("Invalid credentials provided")
+    if (username !== superAdminUsername) {
+      console.log("Username mismatch")
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
     }
 
-    console.log("Credentials valid, finding/creating super admin user...")
+    // For development, allow plain text password comparison
+    // In production, you should hash the super admin password
+    let passwordValid = false
 
-    // Find or create super admin user
-    let superAdmin = await User.findOne({ email: "admin@diasporaconnect.com" })
-
-    if (!superAdmin) {
-      console.log("Creating new super admin user...")
-      superAdmin = new User({
-        firstName: "Super",
-        lastName: "Admin",
-        email: "admin@diasporaconnect.com",
-        password: "admin123", // This will be hashed by the pre-save hook
-        phone: "+1234567890",
-        role: "super_admin",
-      })
-      await superAdmin.save()
-      console.log("Super admin user created")
+    if (superAdminPassword.startsWith("$2a$") || superAdminPassword.startsWith("$2b$")) {
+      // Password is hashed
+      passwordValid = await bcrypt.compare(password, superAdminPassword)
+      console.log("Using hashed password comparison:", passwordValid)
     } else {
-      console.log("Super admin user found")
+      // Password is plain text (development only)
+      passwordValid = password === superAdminPassword
+      console.log("Using plain text password comparison:", passwordValid)
     }
 
-    // Update login info
-    superAdmin.lastLogin = new Date()
-    superAdmin.loginCount = (superAdmin.loginCount || 0) + 1
-    await superAdmin.save()
+    if (!passwordValid) {
+      console.log("Password validation failed")
+      return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
+    }
 
-    // Generate JWT
-    const jwtSecret = process.env.JWT_SECRET || "fallback-secret-key-for-development"
-    const token = jwt.sign({ id: superAdmin._id, role: "super_admin" }, jwtSecret, { expiresIn: "24h" })
+    console.log("Credentials validated, connecting to database...")
 
-    console.log("JWT token generated")
-
-    // Log admin login
     try {
-      await new AdminLog({
-        adminId: superAdmin._id,
-        action: "LOGIN",
-        targetType: "system",
-        details: { loginMethod: "super_admin_credentials" },
-        ipAddress: request.headers.get("x-forwarded-for") || "unknown",
-        userAgent: request.headers.get("user-agent") || "unknown",
-      }).save()
-      console.log("Admin log created")
+      await connectDB()
+      console.log("Database connected successfully")
+    } catch (dbError) {
+      console.error("Database connection error:", dbError)
+      // Continue without database for super admin login
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        id: "super-admin",
+        email: "admin@system.com",
+        role: "super_admin",
+        isSuperAdmin: true,
+      },
+      jwtSecret,
+      { expiresIn: "24h" },
+    )
+
+    console.log("JWT token created successfully")
+
+    // Try to log the admin action (non-blocking)
+    try {
+      const adminLog = new AdminLog({
+        admin: "super-admin",
+        action: "login",
+        details: {
+          timestamp: new Date(),
+          ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+          userAgent: request.headers.get("user-agent") || "unknown",
+        },
+      })
+      await adminLog.save()
+      console.log("Admin login logged successfully")
     } catch (logError) {
-      console.error("Error creating admin log:", logError)
+      console.error("Failed to log admin action (non-critical):", logError)
       // Don't fail the login if logging fails
     }
 
-    console.log("Super admin login successful")
-
-    return NextResponse.json({
-      message: "Super admin login successful",
-      token,
-      user: {
-        id: superAdmin._id,
-        firstName: superAdmin.firstName,
-        lastName: superAdmin.lastName,
-        email: superAdmin.email,
-        role: superAdmin.role,
+    const response = NextResponse.json(
+      {
+        message: "Login successful",
+        user: {
+          id: "super-admin",
+          email: "admin@system.com",
+          firstName: "Super",
+          lastName: "Admin",
+          role: "super_admin",
+          isSuperAdmin: true,
+        },
+        token,
       },
+      { status: 200 },
+    )
+
+    // Set HTTP-only cookie
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60, // 24 hours
     })
+
+    console.log("Super admin login successful")
+    return response
   } catch (error) {
     console.error("Super admin login error:", error)
     return NextResponse.json(

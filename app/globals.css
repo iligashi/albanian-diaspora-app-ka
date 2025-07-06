@@ -84,86 +84,51 @@
   }
 }
 
-/* Custom styles for the Albanian Diaspora app */
-.gradient-bg {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-}
-
-.glass-effect {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.hover-lift {
-  transition: transform 0.2s ease-in-out;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-}
-
-/* Loading animations */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: hsl(var(--muted));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #dc2626;
+  background: hsl(var(--muted-foreground));
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #991b1b;
+  background: hsl(var(--foreground));
 }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 640px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-}
-
-/* Focus styles for accessibility */
-.focus-visible:focus-visible {
-  outline: 2px solid #dc2626;
-  outline-offset: 2px;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* Custom button styles */
 .btn-primary {
-  @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+  @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-md transition-colors duration-200;
+  @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500;
+}
+
+/* Form styles */
+.form-input {
+  @apply block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-red-500 focus:border-red-500 transition-colors;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
 }
 
 /* Card hover effects */
@@ -171,53 +136,33 @@
   @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
 }
 
-/* Status indicators */
+/* Status badges */
 .status-pending {
-  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+  @apply bg-yellow-100 text-yellow-800;
 }
 
-.status-processing {
-  @apply bg-blue-100 text-blue-800 border-blue-200;
+.status-confirmed {
+  @apply bg-blue-100 text-blue-800;
 }
 
-.status-completed {
-  @apply bg-green-100 text-green-800 border-green-200;
+.status-delivered {
+  @apply bg-green-100 text-green-800;
 }
 
-.status-failed {
-  @apply bg-red-100 text-red-800 border-red-200;
+.status-cancelled {
+  @apply bg-red-100 text-red-800;
 }
 
-/* Form styles */
-.form-group {
-  @apply space-y-2;
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
 }
 
-.form-label {
-  @apply block text-sm font-medium text-gray-700;
-}
-
-.form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500;
-}
-
-.form-error {
-  @apply text-sm text-red-600;
-}
-
-/* Notification styles */
-.notification-success {
-  @apply bg-green-50 border-green-200 text-green-800;
-}
-
-.notification-error {
-  @apply bg-red-50 border-red-200 text-red-800;
-}
-
-.notification-warning {
-  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
-}
-
-.notification-info {
-  @apply bg-blue-50 border-blue-200 text-blue-800;
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
