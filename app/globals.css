@@ -92,7 +92,7 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -111,6 +111,10 @@
   to {
     transform: translateX(0);
   }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Custom scrollbar */
@@ -133,8 +137,8 @@
 
 /* Loading spinner */
 .spinner {
-  border: 2px solid hsl(var(--muted));
-  border-top: 2px solid hsl(var(--primary));
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #dc2626;
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -203,10 +207,13 @@
 }
 
 /* Mobile responsive utilities */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .mobile-full {
-    width: 100vw;
-    margin-left: calc(-50vw + 50%);
+    width: 100%;
+  }
+
+  .mobile-hidden {
+    display: none;
   }
 }
 
@@ -215,8 +222,45 @@
   .no-print {
     display: none !important;
   }
+}
 
-  .print-break {
-    page-break-after: always;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    border: 2px solid;
   }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* PWA specific styles */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Notification styles */
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
 }
