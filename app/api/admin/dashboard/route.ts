@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
-    // User statistics
+    // User stats
     const totalUsers = await User.countDocuments({ role: { $ne: "super_admin" } })
     const activeUsers = await User.countDocuments({
       role: { $ne: "super_admin" },
@@ -34,98 +34,106 @@ export async function GET(request: NextRequest) {
       createdAt: { $gte: startOfMonth },
     })
 
-    // Payment statistics
+    // Payment stats
     const totalPayments = await Payment.countDocuments()
-    const completedPayments = await Payment.find({ status: "completed" })
-    const totalRevenue = completedPayments.reduce((sum, payment) => sum + payment.amount, 0)
-    const monthlyRevenue = completedPayments
-      .filter((payment) => payment.createdAt >= startOfMonth)
-      .reduce((sum, payment) => sum + payment.amount, 0)
+    const completedPayments = await Payment.countDocuments({ status: "completed" })
+    const totalRevenue = await Payment.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ])
+    const monthlyRevenue = await Payment.aggregate([
+      { $match: { status: "completed", createdAt: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ])
 
-    // Gift statistics
+    // Gift stats
     const totalGifts = await Gift.countDocuments()
     const deliveredGifts = await Gift.countDocuments({ status: "delivered" })
     const pendingGifts = await Gift.countDocuments({ status: { $in: ["pending", "confirmed", "preparing"] } })
 
-    // Service statistics
+    // Service stats
     const totalServices = await Service.countDocuments()
     const completedServices = await Service.countDocuments({ status: "completed" })
-    const pendingServices = await Service.countDocuments({ status: { $in: ["pending", "accepted"] } })
+    const pendingServices = await Service.countDocuments({ status: { $in: ["pending", "accepted", "in_progress"] } })
 
     // Recent activity
+    const recentLogs = await AdminLog.find().populate("adminId", "firstName lastName").sort({ createdAt: -1 }).limit(10)
+
     const recentUsers = await User.find({ role: { $ne: "super_admin" } })
       .sort({ createdAt: -1 })
       .limit(5)
-      .select("firstName lastName email createdAt isPremium")
+      .select("firstName lastName email isPremium createdAt")
 
-    const recentPayments = await Payment.find().sort({ createdAt: -1 }).limit(5).populate("user", "firstName lastName")
-
-    const recentLogs = await AdminLog.find().sort({ createdAt: -1 }).limit(10).populate("adminId", "firstName lastName")
-
-    // Growth metrics
-    const lastMonthUsers = await User.countDocuments({
-      role: { $ne: "super_admin" },
-      createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
-    })
-    const userGrowth = lastMonthUsers > 0 ? ((newUsersThisMonth - lastMonthUsers) / lastMonthUsers) * 100 : 0
+    const recentPayments = await Payment.find().populate("user", "firstName lastName").sort({ createdAt: -1 }).limit(5)
 
     // Revenue by month (last 6 months)
-    const revenueByMonth = []
-    for (let i = 5; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
+    const revenueByMonth = await Payment.aggregate([
+      {
+        $match: {
+          status: "completed",
+          createdAt: { $gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          revenue: { $sum: "$amount" },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ])
 
-      const monthPayments = await Payment.find({
-        status: "completed",
-        createdAt: { $gte: monthStart, $lte: monthEnd },
-      })
+    const formattedRevenueByMonth = revenueByMonth.map((item) => ({
+      month: `${item._id.year}-${item._id.month.toString().padStart(2, "0")}`,
+      revenue: item.revenue,
+    }))
 
-      const monthRevenue = monthPayments.reduce((sum, payment) => sum + payment.amount, 0)
+    const stats = {
+      users: {
+        total: totalUsers,
+        active: activeUsers,
+        premium: premiumUsers,
+        newThisMonth: newUsersThisMonth,
+        growth: 0, // Calculate growth percentage if needed
+      },
+      payments: {
+        total: totalPayments,
+        completed: completedPayments,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        monthlyRevenue: monthlyRevenue[0]?.total || 0,
+      },
+      gifts: {
+        total: totalGifts,
+        delivered: deliveredGifts,
+        pending: pendingGifts,
+      },
+      services: {
+        total: totalServices,
+        completed: completedServices,
+        pending: pendingServices,
+      },
+    }
 
-      revenueByMonth.push({
-        month: monthStart.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-        revenue: monthRevenue,
-        count: monthPayments.length,
-      })
+    const recentActivity = {
+      logs: recentLogs,
+      users: recentUsers,
+      payments: recentPayments,
+    }
+
+    const analytics = {
+      revenueByMonth: formattedRevenueByMonth,
     }
 
     return NextResponse.json({
-      stats: {
-        users: {
-          total: totalUsers,
-          active: activeUsers,
-          premium: premiumUsers,
-          newThisMonth: newUsersThisMonth,
-          growth: userGrowth,
-        },
-        payments: {
-          total: totalPayments,
-          completed: completedPayments.length,
-          totalRevenue,
-          monthlyRevenue,
-        },
-        gifts: {
-          total: totalGifts,
-          delivered: deliveredGifts,
-          pending: pendingGifts,
-        },
-        services: {
-          total: totalServices,
-          completed: completedServices,
-          pending: pendingServices,
-        },
-      },
-      recentActivity: {
-        users: recentUsers,
-        payments: recentPayments,
-        logs: recentLogs,
-      },
-      analytics: {
-        revenueByMonth,
-      },
+      stats,
+      recentActivity,
+      analytics,
     })
   } catch (error) {
-    console.error("Admin dashboard error:", error)
+    console.error("Dashboard error:", error)
     return NextResponse.json({ message: "Server error" }, { status: 500 })
   }
 }

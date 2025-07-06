@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/models/User"
+import { generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,33 +9,29 @@ export async function POST(request: NextRequest) {
 
     const { firstName, lastName, email, password, phone } = await request.json()
 
-    // Check if user exists
+    // Check if user already exists
     const existingUser = await User.findOne({ email })
     if (existingUser) {
       return NextResponse.json({ message: "User already exists" }, { status: 400 })
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(12)
-    const hashedPassword = await bcrypt.hash(password, salt)
-
-    // Create user
+    // Create new user
     const user = new User({
       firstName,
       lastName,
       email,
-      password: hashedPassword,
+      password,
       phone,
     })
 
     await user.save()
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "fallback-secret", { expiresIn: "7d" })
+    // Generate token
+    const token = generateToken(user._id.toString(), user.role)
 
     return NextResponse.json(
       {
-        message: "Registration successful",
+        message: "User created successfully",
         token,
         user: {
           id: user._id,
@@ -44,6 +39,7 @@ export async function POST(request: NextRequest) {
           lastName: user.lastName,
           email: user.email,
           role: user.role,
+          isPremium: user.isPremium,
         },
       },
       { status: 201 },

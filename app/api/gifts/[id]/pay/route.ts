@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import Gift from "@/models/Gift"
-import Payment from "@/models/Payment"
 import User from "@/models/User"
 import { verifyToken } from "@/lib/auth"
 
@@ -14,62 +13,51 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     await connectDB()
 
-    const { paymentMethod } = await request.json()
+    const { paymentMethod, cardDetails } = await request.json()
     const giftId = params.id
 
-    const gift = await Gift.findOne({ _id: giftId, user: user.id })
+    // Find the gift
+    const gift = await Gift.findById(giftId)
     if (!gift) {
       return NextResponse.json({ message: "Gift not found" }, { status: 404 })
     }
 
+    // Check if user owns this gift
+    if (gift.user.toString() !== user.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 })
+    }
+
+    // Check if already paid
     if (gift.paymentStatus === "paid") {
       return NextResponse.json({ message: "Gift already paid" }, { status: 400 })
     }
 
-    // Create payment record for the gift
-    const payment = new Payment({
-      user: user.id,
-      recipient: gift.recipient,
-      billType: "other",
-      amount: gift.finalAmount,
-      currency: gift.currency,
-      description: `Payment for gift: ${gift.item.name}`,
-      paymentMethod: paymentMethod,
-      status: "processing",
-    })
-
-    await payment.save()
-
-    // Link payment to gift
-    gift.paymentId = payment._id
+    // Simulate payment processing
     gift.paymentStatus = "paid"
     gift.status = "confirmed"
     await gift.save()
 
-    // Simulate payment processing
+    // Update user's total spent
+    await User.findByIdAndUpdate(user.id, {
+      $inc: { totalSpent: gift.totalAmount },
+    })
+
+    // Simulate gift processing
     setTimeout(async () => {
       try {
-        payment.status = "completed"
-        payment.completedAt = new Date()
-        payment.paymentDate = new Date()
-        await payment.save()
-
-        // Update user total spent
-        await User.findByIdAndUpdate(user.id, {
-          $inc: { totalSpent: gift.finalAmount },
-        })
+        gift.status = "preparing"
+        await gift.save()
       } catch (err) {
-        console.error("Gift payment completion error:", err)
+        console.error("Gift processing error:", err)
       }
-    }, 3000)
+    }, 2000)
 
     return NextResponse.json({
-      message: "Gift payment processed successfully",
+      message: "Gift payment completed successfully",
       gift,
-      payment,
     })
   } catch (error) {
     console.error("Gift payment error:", error)
-    return NextResponse.json({ message: "Payment processing failed" }, { status: 500 })
+    return NextResponse.json({ message: "Server error" }, { status: 500 })
   }
 }

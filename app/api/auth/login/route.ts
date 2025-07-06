@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/models/User"
+import { generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,23 +10,24 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json()
 
     // Find user
-    const user = await User.findOne({ email }).select("+password")
+    const user = await User.findOne({ email })
     if (!user) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
     }
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) {
+    const isPasswordValid = await user.comparePassword(password)
+    if (!isPasswordValid) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 })
     }
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "fallback-secret", { expiresIn: "7d" })
-
-    // Update last login
+    // Update login info
     user.lastLogin = new Date()
+    user.loginCount += 1
     await user.save()
+
+    // Generate token
+    const token = generateToken(user._id.toString(), user.role)
 
     return NextResponse.json({
       message: "Login successful",
@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        isPremium: user.isPremium,
+        phone: user.phone,
+        address: user.address,
+        kosovoAddress: user.kosovoAddress,
+        familyMembers: user.familyMembers,
+        preferredCurrency: user.preferredCurrency,
+        language: user.language,
       },
     })
   } catch (error) {
