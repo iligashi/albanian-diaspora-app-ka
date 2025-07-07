@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Check environment variables
     const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || "admin"
     const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || "admin"
-    const jwtSecret = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production"
+    const jwtSecret = process.env.JWT_SECRET || "a3ac3c49cee9e7af1402fce0684f50ec34daecf64acd14d94fffa5b490b3300e"
 
     console.log("Expected username:", superAdminUsername)
     console.log("JWT Secret exists:", !!jwtSecret)
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the login if logging fails
     }
 
+    // Create response with user data
     const response = NextResponse.json(
       {
         message: "Login successful",
@@ -101,17 +102,17 @@ export async function POST(request: NextRequest) {
           role: "super_admin",
           isSuperAdmin: true,
         },
-        token,
       },
-      { status: 200 },
+      { status: 200 }
     )
 
-    // Set HTTP-only cookie
-    response.cookies.set("token", token, {
+    // Set the token in cookies
+    response.cookies.set("admin_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 24 * 60 * 60, // 24 hours
+      path: "/",
+      maxAge: 60 * 60 * 24, // 24 hours
     })
 
     console.log("Super admin login successful")

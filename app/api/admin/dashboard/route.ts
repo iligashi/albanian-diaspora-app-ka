@@ -5,12 +5,34 @@ import Payment from "@/models/Payment"
 import Gift from "@/models/Gift"
 import Service from "@/models/Service"
 import AdminLog from "@/models/AdminLog"
-import { verifyToken } from "@/lib/auth"
+import jwt from "jsonwebtoken"
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyToken(request)
+    // Check for token in Authorization header first
+    const authHeader = request.headers.get('authorization')
+    let token = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else {
+      // If not in header, check cookies
+      const cookieToken = request.cookies.get('admin_token')?.value
+      if (cookieToken) {
+        token = cookieToken
+      }
+    }
+    
+    if (!token) {
+      console.error('No authentication token found')
+      return NextResponse.json({ message: "No authentication token provided" }, { status: 401 })
+    }
+    
+    // Verify the token
+    const user = jwt.verify(token, process.env.JWT_SECRET || '') as any
+    
     if (!user || user.role !== "super_admin") {
+      console.error('Invalid or missing user role')
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
