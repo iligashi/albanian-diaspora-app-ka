@@ -4,6 +4,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { parseForm, runAction, type ActionState } from "@/lib/actions"
 import { hashPassword, verifyAgainstDummy, verifyPassword } from "@/lib/auth/password"
+import { safeRedirectPath } from "@/lib/auth/redirect"
 import { createSession, destroySession } from "@/lib/auth/session"
 import { homeFor } from "@/lib/auth/token"
 import { User } from "@/lib/models"
@@ -14,12 +15,6 @@ import { loginSchema, registerSchema } from "@/lib/validation"
 async function clientIp() {
   const h = await headers()
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local"
-}
-
-/** Only allow redirects to our own pages. */
-function safeNext(next: FormDataEntryValue | null) {
-  const value = typeof next === "string" ? next : ""
-  return value.startsWith("/") && !value.startsWith("//") ? value : null
 }
 
 export async function login(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -38,7 +33,7 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
     user.lastLoginAt = new Date()
     await user.save()
     await createSession(user)
-    destination = safeNext(formData.get("next")) ?? homeFor(user.role)
+    destination = safeRedirectPath(formData.get("next")) ?? homeFor(user.role)
   })
   if (result.ok) redirect(destination)
   return { ...result, values: { email: String(formData.get("email") ?? "") } }

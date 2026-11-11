@@ -69,7 +69,7 @@ export default async function VendorBookingPage({ params }: { params: Promise<{ 
                 ["Address", `${booking.recipient.addressLine}, ${booking.recipient.city}`],
                 ["When", `${formatDate(booking.date)}, ${booking.timeSlot}`],
                 ["Customer notes", booking.notes],
-                ["Your payout", <span className="tabular font-semibold">{formatMoney(booking.priceCents)}</span>],
+                ["Your payout", <span key="payout" className="tabular font-semibold">{formatMoney(booking.priceCents)}</span>],
               ]}
             />
           </Section>

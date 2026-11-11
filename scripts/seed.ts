@@ -28,16 +28,16 @@ async function main() {
   if (email && password) {
     if (password.length < 12) throw new Error("SEED_ADMIN_PASSWORD must be at least 12 characters.")
     await ensureAdmin(email, password)
-    console.log(`Admin account ready: ${email}`)
+    console.info(`Admin account ready: ${email}`)
   } else {
-    console.log("SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD not set, skipping admin account.")
+    console.info("SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD not set, skipping admin account.")
   }
 
   if (process.argv.includes("--demo")) {
     if (process.env.NODE_ENV === "production") throw new Error("Refusing to create demo data in production.")
     const created = await seedDemoData()
-    console.log(created ? "Demo data created." : "Demo data already present.")
-    console.log(`Demo logins (password "${DEMO_PASSWORD}"): ${Object.values(DEMO_ACCOUNTS).join(", ")}`)
+    console.info(created ? "Demo data created." : "Demo data already present.")
+    console.info(`Demo logins (password "${DEMO_PASSWORD}"): ${Object.values(DEMO_ACCOUNTS).join(", ")}`)
   }
 }
 

@@ -16,6 +16,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       "Content-Length": String(found.media.size),
       "Cache-Control": "private, max-age=86400",
       "Content-Disposition": "inline",
+      // User uploads never run as a page, even if a browser tried to render one.
+      "Content-Security-Policy": "default-src 'none'; media-src 'self'; img-src 'self'; sandbox",
+      "X-Content-Type-Options": "nosniff",
     },
   })
 }
