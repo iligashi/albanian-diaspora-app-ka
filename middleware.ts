@@ -9,10 +9,7 @@ import { homeFor, SESSION_COOKIE, verifySession } from "./lib/auth/token"
 const AREAS: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/admin", roles: ["admin"] },
   { prefix: "/vendor", roles: ["vendor"] },
-  {
-    prefix: "/dashboard",
-    roles: ["customer"],
-  },
+  { prefix: "/dashboard", roles: ["customer"] },
   { prefix: "/family", roles: ["customer"] },
   { prefix: "/bills", roles: ["customer"] },
   { prefix: "/gifts", roles: ["customer"] },

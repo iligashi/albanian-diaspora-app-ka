@@ -47,9 +47,9 @@ export default async function BillPage({ params, searchParams }: { params: Promi
               items={[
                 ["Household", `${bill.recipient.fullName}, ${bill.recipient.city}`],
                 ["Provider", provider?.name],
-                [provider?.accountLabel ?? "Account", <span className="font-mono text-xs">{bill.accountNumber}</span>],
+                [provider?.accountLabel ?? "Account", <span key="account" className="font-mono text-xs">{bill.accountNumber}</span>],
                 ["Period", bill.period],
-                ["Provider receipt", bill.settlementReference ? <span className="font-mono text-xs">{bill.settlementReference}</span> : null],
+                ["Provider receipt", bill.settlementReference ? <span key="receipt" className="font-mono text-xs">{bill.settlementReference}</span> : null],
                 ["Settled", bill.settledAt ? formatDateTime(bill.settledAt) : null],
               ]}
             />
