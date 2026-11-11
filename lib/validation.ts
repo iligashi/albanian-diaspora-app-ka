@@ -9,6 +9,7 @@ import {
   VENDOR_KINDS,
 } from "./domain/catalog"
 import { parseMoneyToCents } from "./money"
+import { PLAN_INTERVALS } from "./domain/plans"
 
 /** Input schemas shared by server actions. Form values arrive as strings. */
 
@@ -48,6 +49,20 @@ const futureDate = (label: string, minDaysAhead: number) =>
     }, minDaysAhead === 0 ? `${label} can't be in the past` : `${label} must be at least ${minDaysAhead} day(s) from today`)
     .refine((d) => d.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 120, `${label} must be within the next 4 months`)
 
+/** "card" or the id of a wallet; ownership is checked by the service. */
+const payWith = z
+  .string()
+  .optional()
+  .transform((v) => v || "card")
+  .refine((v) => v === "card" || /^[a-f\d]{24}$/i.test(v), "Choose how you want to pay")
+const repeat = z.enum(["once", ...PLAN_INTERVALS]).default("once")
+const birthdayPart = (max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v ? Number(v) : undefined))
+    .pipe(z.number().int().min(1).max(max).optional())
+
 const password = z
   .string()
   .min(10, "Use at least 10 characters")
@@ -66,6 +81,7 @@ export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   password,
   country: optional(60),
+  ref: optional(20),
 })
 
 export const vendorProfileSchema = z.object({
@@ -84,6 +100,8 @@ export const recipientSchema = z.object({
   city: z.enum(CITIES, { message: "Choose a city" }),
   addressLine: required("Address", 200),
   notes: optional(500),
+  birthdayMonth: birthdayPart(12),
+  birthdayDay: birthdayPart(31),
 })
 
 export const billSchema = z.object({
@@ -92,6 +110,8 @@ export const billSchema = z.object({
   accountNumber: required("Account number", 60),
   period: optional(40),
   amount: money("Amount"),
+  payWith,
+  repeat,
 })
 
 export const giftOrderSchema = z.object({
@@ -100,6 +120,8 @@ export const giftOrderSchema = z.object({
   recipientId: objectId,
   deliveryDate: futureDate("Delivery date", 1),
   message: optional(500),
+  payWith,
+  repeat,
 })
 
 export const bookingSchema = z.object({
@@ -108,6 +130,8 @@ export const bookingSchema = z.object({
   date: futureDate("Date", 1),
   timeSlot: z.enum(TIME_SLOTS, { message: "Choose a time slot" }),
   notes: optional(1000),
+  payWith,
+  repeat,
 })
 
 export const reviewSchema = z.object({
@@ -154,3 +178,8 @@ export const settleBillSchema = z.object({
 })
 
 export const idSchema = objectId
+
+export const walletNameSchema = z.object({ name: required("Wallet name", 80) })
+export const walletInviteSchema = z.object({ walletId: objectId, email: z.string().trim().toLowerCase().email("Enter a valid email") })
+export const topUpSchema = z.object({ walletId: objectId, amount: money("Amount").pipe(z.number().min(500, "Top up at least €5")) })
+export const proofSchema = z.object({ kind: z.enum(["gift", "booking"]), orderId: objectId, note: optional(1000) })

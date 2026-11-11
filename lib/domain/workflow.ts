@@ -199,6 +199,8 @@ const TONES: Record<string, StatusTone> = {
   pending: "warning",
   approved: "success",
   suspended: "danger",
+  active: "success",
+  paused: "warning",
 }
 
 export function statusTone(status: string): StatusTone {

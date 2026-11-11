@@ -7,7 +7,10 @@ import { formatMoney, serviceFeeCents } from "../money"
 import { Bill, Booking, GiftOrder, Offering, Product, Recipient, User, Vendor, type BookingDoc, type GiftOrderDoc, type RecipientDoc } from "../models"
 import { formatDate, humanize, makeReference } from "../utils"
 import type { billSchema, bookingSchema, giftOrderSchema, recipientSchema, reviewSchema } from "../validation"
-import { AppError, charge, notify, refund, transition } from "./core"
+import { AppError, charge, notify, refund, transition, type PaymentSource } from "./core"
+
+/** Options shared by every order: how to pay, and the recurring plan that created it (if any). */
+export type OrderOptions = { source?: PaymentSource; planId?: Types.ObjectId }
 
 const oid = (id: string) => new Types.ObjectId(id)
 
@@ -28,9 +31,17 @@ async function notifyAdmins(title: string, body: string, href: string) {
 
 // ------------------------------------------------------------------ recipients
 
-export async function saveRecipient(customerId: string, input: z.infer<typeof recipientSchema>, recipientId?: string) {
+export async function saveRecipient(customerId: string, form: z.infer<typeof recipientSchema>, recipientId?: string) {
+  const { birthdayMonth, birthdayDay, ...rest } = form
+  if (Boolean(birthdayMonth) !== Boolean(birthdayDay)) throw new AppError("Choose both the day and the month of the birthday, or neither.")
+  if (birthdayMonth && birthdayDay && birthdayDay > new Date(2024, birthdayMonth, 0).getDate()) throw new AppError("That birthday date doesn't exist.")
+  const input = { ...rest, birthday: birthdayMonth && birthdayDay ? { month: birthdayMonth, day: birthdayDay } : undefined }
   if (recipientId) {
-    const updated = await Recipient.findOneAndUpdate({ _id: recipientId, owner: customerId }, { $set: input }, { new: true })
+    const updated = await Recipient.findOneAndUpdate(
+      { _id: recipientId, owner: customerId },
+      input.birthday ? { $set: input } : { $set: rest, $unset: { birthday: 1 } },
+      { new: true },
+    )
     if (!updated) throw new AppError("Family member not found.")
     return updated
   }
@@ -47,7 +58,7 @@ export async function deleteRecipient(customerId: string, recipientId: string) {
 
 // ------------------------------------------------------------------ bills
 
-export async function payBill(customerId: string, input: z.infer<typeof billSchema>) {
+export async function payBill(customerId: string, input: Pick<z.infer<typeof billSchema>, "recipientId" | "provider" | "accountNumber" | "period" | "amount">, opts: OrderOptions = {}) {
   const recipient = await ownedRecipient(customerId, input.recipientId)
   const provider = getBillProvider(input.provider)!
   const feeCents = serviceFeeCents(input.amount)
@@ -62,12 +73,14 @@ export async function payBill(customerId: string, input: z.infer<typeof billSche
     feeCents,
     totalCents: input.amount + feeCents,
     status: billMachine.initial,
-    events: [{ status: billMachine.initial, actor: "customer" }],
+    plan: opts.planId,
+    events: [{ status: billMachine.initial, actor: opts.planId ? "system" : "customer" }],
   })
 
   const result = await charge(
     { kind: "bill", id: bill._id, reference: bill.reference, customer: bill.customer, description: `${provider.name} bill for ${recipient.fullName}` },
     bill.totalCents,
+    opts.source,
   )
   const { updated } = await transition({
     model: Bill,
@@ -85,7 +98,7 @@ export async function payBill(customerId: string, input: z.infer<typeof billSche
 
 // ------------------------------------------------------------------ gifts
 
-export async function placeGiftOrder(customerId: string, input: z.infer<typeof giftOrderSchema>) {
+export async function placeGiftOrder(customerId: string, input: Pick<z.infer<typeof giftOrderSchema>, "productId" | "quantity" | "recipientId" | "deliveryDate" | "message">, opts: OrderOptions = {}) {
   const [recipient, product] = await Promise.all([
     ownedRecipient(customerId, input.recipientId),
     Product.findOne({ _id: input.productId, active: true }).lean(),
@@ -111,12 +124,14 @@ export async function placeGiftOrder(customerId: string, input: z.infer<typeof g
     message: input.message,
     deliveryDate: input.deliveryDate,
     status: giftMachine.initial,
-    events: [{ status: giftMachine.initial, actor: "customer" }],
+    plan: opts.planId,
+    events: [{ status: giftMachine.initial, actor: opts.planId ? "system" : "customer" }],
   })
 
   const result = await charge(
     { kind: "gift", id: order._id, reference: order.reference, customer: order.customer, description: `${product.name} for ${recipient.fullName}` },
     order.totalCents,
+    opts.source,
   )
   const { updated } = await transition({
     model: GiftOrder,
@@ -160,7 +175,7 @@ export async function updateGiftOrder(user: { id: string; role: Actor }, orderId
 
 // ------------------------------------------------------------------ bookings
 
-export async function requestBooking(customerId: string, input: z.infer<typeof bookingSchema>) {
+export async function requestBooking(customerId: string, input: Pick<z.infer<typeof bookingSchema>, "offeringId" | "recipientId" | "date" | "timeSlot" | "notes">, opts: OrderOptions = {}) {
   const [recipient, offering] = await Promise.all([
     ownedRecipient(customerId, input.recipientId),
     Offering.findOne({ _id: input.offeringId, active: true }).lean(),
@@ -195,12 +210,14 @@ export async function requestBooking(customerId: string, input: z.infer<typeof b
     feeCents,
     totalCents: offering.priceCents + feeCents,
     status: bookingMachine.initial,
-    events: [{ status: bookingMachine.initial, actor: "customer" }],
+    plan: opts.planId,
+    events: [{ status: bookingMachine.initial, actor: opts.planId ? "system" : "customer" }],
   })
 
   const result = await charge(
     { kind: "booking", id: booking._id, reference: booking.reference, customer: booking.customer, description: `${offering.title} for ${recipient.fullName}` },
     booking.totalCents,
+    opts.source,
   )
   const { updated } = await transition({
     model: Booking,
@@ -264,7 +281,7 @@ export async function reviewBooking(customerId: string, input: z.infer<typeof re
 
 // ------------------------------------------------------------------ access
 
-async function assertOrderAccess(user: { id: string; role: Actor }, order: { customer: Types.ObjectId; vendor: Types.ObjectId }) {
+export async function assertOrderAccess(user: { id: string; role: Actor }, order: { customer: Types.ObjectId; vendor: Types.ObjectId }) {
   if (user.role === "admin") return
   if (user.role === "customer" && order.customer.equals(oid(user.id))) return
   if (user.role === "vendor") {
