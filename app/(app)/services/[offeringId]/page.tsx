@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session"
 import { formatMoney } from "@/lib/money"
 import { Offering, Vendor } from "@/lib/models"
 import { recipientOptions } from "@/lib/recipient-options"
+import { walletOptions } from "@/lib/wallet-options"
 import { humanize } from "@/lib/utils"
 import { BookingForm } from "./booking-form"
 
@@ -23,7 +24,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ offer
   if (!offering) notFound()
   const vendor = await Vendor.findOne({ _id: offering.vendor, status: "approved" }).lean()
   if (!vendor) notFound()
-  const recipients = await recipientOptions(user.id)
+  const [recipients, wallets] = await Promise.all([recipientOptions(user.id), walletOptions(user.id)])
 
   return (
     <>
@@ -62,6 +63,7 @@ export default async function OfferingPage({ params }: { params: Promise<{ offer
           recipients={recipients}
           servedCities={vendor.serviceCities}
           vendorName={vendor.businessName}
+          wallets={wallets}
         />
       )}
     </>

@@ -32,7 +32,9 @@ export function parseForm<S extends z.ZodTypeAny>(schema: S, formData: FormData,
     if (arrays.includes(key)) {
       raw[key] = formData.getAll(key).map(String)
     } else {
-      const value = String(formData.get(key) ?? "")
+      const entry = formData.get(key)
+      if (entry instanceof File) continue // files are read separately by the action
+      const value = String(entry ?? "")
       raw[key] = value
       if (!/password/i.test(key)) values[key] = value
     }

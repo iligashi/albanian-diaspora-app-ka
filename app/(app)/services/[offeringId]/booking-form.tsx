@@ -2,12 +2,14 @@
 
 import { useActionState } from "react"
 import { Field, FormError, SubmitButton, selectClass } from "@/components/shared/form"
+import { PaymentOptions } from "@/components/shared/payment-options"
 import { PriceBreakdown, TestModeNote } from "@/components/shared/primitives"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { TIME_SLOTS } from "@/lib/domain/catalog"
 import { formatMoney, serviceFeeCents } from "@/lib/money"
 import type { RecipientOption } from "@/lib/recipient-options"
+import type { WalletOption } from "@/lib/wallet-options"
 import { requestBookingAction } from "../../customer-actions"
 
 function isoDate(daysAhead: number) {
@@ -21,11 +23,13 @@ export function BookingForm({
   recipients,
   servedCities,
   vendorName,
+  wallets,
 }: {
   offering: { id: string; title: string; priceCents: number }
   recipients: RecipientOption[]
   servedCities: string[]
   vendorName: string
+  wallets: WalletOption[]
 }) {
   const [state, action] = useActionState(requestBookingAction, {})
   const v = state.values ?? {}
@@ -86,6 +90,7 @@ export function BookingForm({
           ]}
           total={formatMoney(offering.priceCents + fee)}
         />
+        <PaymentOptions wallets={wallets} totalCents={offering.priceCents + fee} kind="booking" values={v} errors={e} />
         <TestModeNote />
         <SubmitButton className="w-full" disabled={eligible.length === 0} pendingText="Booking…">
           Book and pay {formatMoney(offering.priceCents + fee)}

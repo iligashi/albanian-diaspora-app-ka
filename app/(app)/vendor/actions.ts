@@ -7,7 +7,8 @@ import { requireUser } from "@/lib/auth/session"
 import { BOOKING_STATUSES, GIFT_STATUSES } from "@/lib/domain/workflow"
 import { updateBooking, updateGiftOrder } from "@/lib/services/orders"
 import { saveOffering, saveProduct, saveVendorProfile } from "@/lib/services/vendor"
-import { idSchema, offeringSchema, productSchema, vendorProfileSchema } from "@/lib/validation"
+import { addProof, readUpload } from "@/lib/services/media"
+import { idSchema, offeringSchema, productSchema, proofSchema, vendorProfileSchema } from "@/lib/validation"
 
 const note = z.string().trim().max(300).optional()
 
@@ -65,5 +66,17 @@ export async function vendorBookingAction(bookingId: string, to: string, reason?
     await updateBooking({ id: user.id, role: "vendor" }, idSchema.parse(bookingId), z.enum(BOOKING_STATUSES).parse(to), note.parse(reason))
     revalidatePath("/vendor", "layout")
     return { ok: true, message: "Booking updated. The customer has been notified." }
+  })
+}
+
+export async function uploadProofAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requireUser("vendor")
+    const input = parseForm(proofSchema, formData)
+    const photo = await readUpload(formData.get("photo"), "photo")
+    if (!photo) return { fieldErrors: { photo: "Choose a photo" } }
+    await addProof({ id: user.id, role: "vendor" }, input.kind, input.orderId, photo, input.note)
+    revalidatePath("/vendor", "layout")
+    return { ok: true, message: "Photo shared with the family" }
   })
 }

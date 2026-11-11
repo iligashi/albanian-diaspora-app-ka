@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { parseForm, runAction, type ActionState } from "@/lib/actions"
 import { requireUser } from "@/lib/auth/session"
+import { runDuePlans } from "@/lib/services/plans"
+import { sendBirthdayReminders } from "@/lib/services/reminders"
 import { refundBill, setUserStatus, setVendorStatus, settleBill } from "@/lib/services/admin"
 import { idSchema, settleBillSchema } from "@/lib/validation"
 
@@ -43,5 +45,16 @@ export async function setUserStatusAction(userId: string, status: "active" | "di
     await setUserStatus(admin.id, idSchema.parse(userId), z.enum(["active", "disabled"]).parse(status))
     revalidatePath("/admin/users")
     return { ok: true, message: status === "active" ? "Account re-enabled." : "Account disabled. They've been signed out." }
+  })
+}
+
+export async function runPlansAction(): Promise<ActionState> {
+  return runAction(async () => {
+    await requireUser("admin")
+    const r = await runDuePlans()
+    const reminders = await sendBirthdayReminders()
+    revalidatePath("/admin", "layout")
+    const plans = r.ran === 0 ? "No plans were due" : `Ran ${r.ran} plan(s): ${r.succeeded} placed, ${r.failed} failed`
+    return { ok: true, message: `${plans}. ${reminders} birthday reminder(s) sent.` }
   })
 }

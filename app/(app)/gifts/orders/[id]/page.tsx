@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { isValidObjectId } from "mongoose"
 import { CheckCircle2 } from "lucide-react"
+import { ProofGallery, VoiceNote } from "@/components/shared/proof"
 import { DetailList, PageHeader, PriceBreakdown, Section, StatusBadge, Timeline } from "@/components/shared/primitives"
 import { ProgressSteps } from "@/components/shared/progress-steps"
 import { TransitionButtons } from "@/components/shared/transition-buttons"
@@ -52,6 +53,16 @@ export default async function GiftOrderPage({ params, searchParams }: { params: 
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
+          {(order.proofPhotos?.length || ["out_for_delivery", "delivered"].includes(order.status)) && (
+            <Section title="Photos from home">
+              <ProofGallery photos={order.proofPhotos ?? []} emptyText="The shop can share a photo when they deliver. You'll get a notification." />
+            </Section>
+          )}
+          {order.voiceNote && (
+            <Section title="Your voice message">
+              <VoiceNote id={order.voiceNote} caption="The shop plays this when they hand over the gift." />
+            </Section>
+          )}
           <Section title="Delivery">
             <DetailList
               items={[

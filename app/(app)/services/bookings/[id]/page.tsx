@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { isValidObjectId } from "mongoose"
 import { CheckCircle2, Star } from "lucide-react"
+import { ProofGallery, VoiceNote } from "@/components/shared/proof"
 import { DetailList, PageHeader, PriceBreakdown, Section, StatusBadge, Timeline } from "@/components/shared/primitives"
 import { ProgressSteps } from "@/components/shared/progress-steps"
 import { TransitionButtons } from "@/components/shared/transition-buttons"
@@ -66,6 +67,11 @@ export default async function BookingPage({ params, searchParams }: { params: Pr
               ) : (
                 <ReviewForm bookingId={booking._id.toString()} />
               )}
+            </Section>
+          )}
+          {(booking.proofPhotos?.length || booking.reportNote || ["in_progress", "completed"].includes(booking.status)) && (
+            <Section title="Report from the visit">
+              <ProofGallery photos={booking.proofPhotos ?? []} note={booking.reportNote} emptyText="The provider can share photos and a short report from the visit." />
             </Section>
           )}
           <Section title="Visit">

@@ -18,6 +18,8 @@ const AREAS: Array<{ prefix: string; roles: string[] }> = [
   { prefix: "/gifts", roles: ["customer"] },
   { prefix: "/services", roles: ["customer"] },
   { prefix: "/activity", roles: ["customer"] },
+  { prefix: "/wallet", roles: ["customer"] },
+  { prefix: "/plans", roles: ["customer"] },
   { prefix: "/notifications", roles: ["customer", "vendor", "admin"] },
   { prefix: "/settings", roles: ["customer", "vendor", "admin"] },
 ]

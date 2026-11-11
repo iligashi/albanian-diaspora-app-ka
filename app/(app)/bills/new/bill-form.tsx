@@ -2,15 +2,17 @@
 
 import { useActionState, useState } from "react"
 import { Field, FormError, SubmitButton, selectClass } from "@/components/shared/form"
+import { PaymentOptions } from "@/components/shared/payment-options"
 import { PriceBreakdown, TestModeNote } from "@/components/shared/primitives"
 import { Input } from "@/components/ui/input"
 import { BILL_CATEGORIES, BILL_PROVIDERS, getBillProvider } from "@/lib/domain/catalog"
 import { formatMoney, parseMoneyToCents, serviceFeeCents } from "@/lib/money"
 import { humanize } from "@/lib/utils"
 import type { RecipientOption } from "@/lib/recipient-options"
+import type { WalletOption } from "@/lib/wallet-options"
 import { payBillAction } from "../../customer-actions"
 
-export function BillForm({ recipients }: { recipients: RecipientOption[] }) {
+export function BillForm({ recipients, wallets }: { recipients: RecipientOption[]; wallets: WalletOption[] }) {
   const [state, action] = useActionState(payBillAction, {})
   const v = state.values ?? {}
   const e = state.fieldErrors ?? {}
@@ -83,6 +85,7 @@ export function BillForm({ recipients }: { recipients: RecipientOption[] }) {
           ]}
           total={cents ? formatMoney(cents + fee) : "—"}
         />
+        <PaymentOptions wallets={wallets} totalCents={cents ? cents + fee : null} kind="bill" values={v} errors={e} />
         <TestModeNote />
         <SubmitButton className="w-full" pendingText="Processing payment…">
           Pay {cents ? formatMoney(cents + fee) : ""}

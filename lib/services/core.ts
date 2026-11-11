@@ -18,15 +18,28 @@ export async function notify(userId: Types.ObjectId | string, title: string, bod
 
 type Subject = { kind: SubjectKind; id: Types.ObjectId; reference: string; description: string; customer: Types.ObjectId }
 
+/** How the customer pays: their card (through the payment provider) or a wallet they belong to. */
+export type PaymentSource = { type: "card" } | { type: "wallet"; walletId: string }
+
+export function parsePaymentSource(value: string | undefined): PaymentSource {
+  if (!value || value === "card") return { type: "card" }
+  if (!/^[a-f\d]{24}$/i.test(value)) throw new AppError("Choose how you want to pay.")
+  return { type: "wallet", walletId: value }
+}
+
 /** Charges the customer and records the attempt in the ledger, whatever the outcome. */
-export async function charge(subject: Subject, amountCents: number) {
-  const provider = paymentProvider()
-  const result = await provider.charge({
-    amountCents,
-    description: subject.description,
-    reference: subject.reference,
-    customerId: subject.customer.toString(),
-  })
+export async function charge(subject: Subject, amountCents: number, source: PaymentSource = { type: "card" }) {
+  const { debitWallet, rewardReferral } = await import("./wallet")
+  let provider: string
+  let result: { ok: true; providerReference: string } | { ok: false; reason: string }
+  if (source.type === "wallet") {
+    provider = "wallet"
+    result = await debitWallet(source.walletId, subject.customer, amountCents, { kind: subject.kind, id: subject.id, description: subject.description })
+  } else {
+    const card = paymentProvider()
+    provider = card.name
+    result = await card.charge({ amountCents, description: subject.description, reference: subject.reference, customerId: subject.customer.toString() })
+  }
   await Transaction.create({
     customer: subject.customer,
     subjectKind: subject.kind,
@@ -35,15 +48,20 @@ export async function charge(subject: Subject, amountCents: number) {
     description: subject.description,
     type: "charge",
     amountCents,
-    provider: provider.name,
+    provider,
     providerReference: result.ok ? result.providerReference : undefined,
+    wallet: source.type === "wallet" ? source.walletId : undefined,
     status: result.ok ? "succeeded" : "failed",
     failureReason: result.ok ? undefined : result.reason,
   })
+  if (result.ok) await rewardReferral(subject.customer)
   return result
 }
 
-/** Refunds the successful charge for a subject. Safe to call twice: it refuses to refund more than was charged. */
+/**
+ * Refunds the successful charge for a subject back to where it came from (card
+ * or wallet). Safe to call twice: it refuses to refund more than was charged.
+ */
 export async function refund(kind: SubjectKind, id: Types.ObjectId) {
   const charges = await Transaction.find({ subjectKind: kind, subjectId: id, status: "succeeded" }).lean()
   const original = charges.find((t) => t.type === "charge")
@@ -52,8 +70,13 @@ export async function refund(kind: SubjectKind, id: Types.ObjectId) {
   const amount = original.amountCents - alreadyRefunded
   if (amount <= 0) return
 
-  const provider = paymentProvider()
-  const result = await provider.refund({ providerReference: original.providerReference!, amountCents: amount })
+  let result: { ok: true; providerReference: string } | { ok: false; reason: string }
+  if (original.provider === "wallet" && original.wallet) {
+    const { creditWallet } = await import("./wallet")
+    result = await creditWallet(original.wallet, original.customer, amount, "refund", `Refund: ${original.description}`, { kind, id, description: original.description })
+  } else {
+    result = await paymentProvider().refund({ providerReference: original.providerReference!, amountCents: amount })
+  }
   await Transaction.create({
     customer: original.customer,
     subjectKind: kind,
@@ -62,7 +85,8 @@ export async function refund(kind: SubjectKind, id: Types.ObjectId) {
     description: `Refund: ${original.description}`,
     type: "refund",
     amountCents: amount,
-    provider: provider.name,
+    provider: original.provider,
+    wallet: original.wallet,
     providerReference: result.ok ? result.providerReference : undefined,
     status: result.ok ? "succeeded" : "failed",
     failureReason: result.ok ? undefined : result.reason,

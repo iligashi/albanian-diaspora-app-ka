@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Gifts" }
 
 const CATEGORY_ICON = { flowers: Flower2, cakes: Cake, food_baskets: ShoppingBasket, sweets: Candy, household: Home, other: Package }
 
-export default async function GiftsPage({ searchParams }: { searchParams: Promise<{ category?: string; city?: string }> }) {
+export default async function GiftsPage({ searchParams }: { searchParams: Promise<{ category?: string; city?: string; for?: string }> }) {
   const user = await requireUser("customer")
   const sp = await searchParams
   const category = GIFT_CATEGORIES.includes(sp.category as GiftCategory) ? (sp.category as GiftCategory) : undefined
@@ -59,7 +59,7 @@ export default async function GiftsPage({ searchParams }: { searchParams: Promis
           {products.map((p) => {
             const Icon = CATEGORY_ICON[p.category]
             return (
-              <Link key={p.id} href={`/gifts/${p.id}`} className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
+              <Link key={p.id} href={sp.for && /^[a-f\d]{24}$/i.test(sp.for) ? `/gifts/${p.id}?for=${sp.for}` : `/gifts/${p.id}`} className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
                 <div className="grid aspect-[16/9] place-items-center bg-gradient-to-br from-accent to-secondary">
                   <Icon className="size-10 text-primary/70 transition-transform group-hover:scale-110" />
                 </div>

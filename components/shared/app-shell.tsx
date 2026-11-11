@@ -20,6 +20,9 @@ import {
   Wallet,
   Wrench,
   type LucideIcon,
+  BarChart3,
+  CreditCard,
+  Repeat,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -51,6 +54,9 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   store: Store,
   shield: ShieldCheck,
   badge: BadgeCheck,
+  repeat: Repeat,
+  chart: BarChart3,
+  card: CreditCard,
 }
 
 const ROLE_LABEL: Record<Role, string> = { customer: "Family account", vendor: "Vendor", admin: "Operations" }

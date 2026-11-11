@@ -75,6 +75,7 @@ export const SERVICE_CATEGORIES = [
   "repairs",
   "gardening",
   "elderly_care",
+  "check_in",
   "transport",
   "other",
 ] as const

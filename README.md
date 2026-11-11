@@ -35,7 +35,8 @@ Demo accounts (password `demo-pass-2026`, local only):
 
 | Email | Role |
 |---|---|
-| `arben@demo.test` | Customer with family members and orders |
+| `arben@demo.test` | Customer with family members, orders, a shared family wallet and a monthly plan |
+| `besa@demo.test` | Arben's sister in Switzerland, shares the "Krasniqi family" wallet |
 | `flora@demo.test` | Approved gift shop |
 | `pastrim@demo.test` | Approved cleaning service |
 | `admin@demo.test` | Operations |
@@ -114,19 +115,38 @@ Status updates are **atomic compare-and-set** (`findOneAndUpdate` matching the e
 
 `lib/payments.ts` defines a `PaymentProvider` interface. The only implementation today is the **test provider**, which approves instantly and moves no money. The UI labels this clearly. Adding Stripe means writing one more provider plus a webhook; order code doesn't change.
 
+### Family features
+
+- **Family wallets.** Siblings abroad share one balance: anyone can top up, anyone can pay for an order from it, and the wallet page shows who put in what. Debits are a single atomic `findOneAndUpdate` with a `balanceCents >= amount` guard, so two people paying at once can never take it below zero. Refunds of wallet payments go back to the wallet. Members are invited by email.
+- **Recurring plans.** Any bill, gift or booking can repeat (weekly to yearly). A plan is placed ahead of time (gifts 3 days, services 4 days before) by `runDuePlans`, which claims each plan atomically so overlapping runners never double-order. After 3 failures in a row a plan pauses and the customer is told why.
+- **Occasions.** Family birthdays plus Albanian and Kosovo holidays (Flag Day, Independence Day, Bajram, Easter...) appear on the dashboard, with a reminder 5 days before each birthday.
+- **Proof and voice notes.** Vendors attach delivery or visit photos; customers can record a voice message to go with a gift. Files are stored in MongoDB GridFS, checked by their actual bytes, and only served to people on that order.
+- **Wellbeing check-in visits** as a service category, with a visit report.
+- **Yearly report** of everything sent home, per month, per type and per family member (printable to PDF).
+- **Referrals.** Every customer has an invite link; both people get €5 wallet credit after the new person's first payment.
+
+### Scheduled jobs
+
+`GET /api/cron/daily` with `Authorization: Bearer $CRON_SECRET` runs due plans and birthday reminders (for example from Vercel Cron or any scheduler). Admins can also trigger it from the operations page with **Run due plans**.
+
 ### Security
 
 - Sessions are signed JWTs in an **httpOnly, SameSite=Lax** cookie (secure in production). Nothing is kept in localStorage.
 - `middleware.ts` keeps each role in its own area. Every page and action also calls `requireUser()`, which re-reads the user from the database so disabled accounts lose access immediately.
 - All input is validated with zod on the server. Every query is scoped to the owner, vendor or admin, and other people's ids return "not found".
 - Passwords are hashed with bcrypt (cost 12). Login is rate limited and returns the same message and timing for unknown emails.
+- Uploads are size-limited and type-checked by magic bytes, never by file name.
 - The app refuses to start without a strong `SESSION_SECRET`, and `MONGODB_URI=memory` is blocked in production.
 - Security headers are set in `next.config.ts`.
 
 ## Roadmap
 
-- Stripe provider + webhook (the interface is ready)
-- Albanian / English translations (`next-intl`)
-- Photo proof of delivery and product images (object storage)
+- Stripe provider + webhook, with Apple Pay and Google Pay (the interface is ready)
+- WhatsApp / Viber notifications for families back home
+- Live bill lookup from utility providers
+- Albanian / English translations (`next-intl`) and an installable PWA
+- "Family at home" mode for relatives in Kosovo to request things themselves
+- Construction and property management, diaspora-season planning, associations, more countries
+- Product images in object storage
 - Redis-backed rate limiting for multi-instance deployments
 - E2E tests (Playwright) for the three main flows

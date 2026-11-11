@@ -15,6 +15,9 @@ export type NavIcon =
   | "store"
   | "shield"
   | "badge"
+  | "repeat"
+  | "chart"
+  | "card"
 
 export const NAV: Record<Role, NavItem[]> = {
   customer: [
@@ -23,7 +26,10 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/bills", label: "Bills", icon: "receipt" },
     { href: "/gifts", label: "Gifts", icon: "gift" },
     { href: "/services", label: "Home services", icon: "wrench" },
-    { href: "/activity", label: "Payments", icon: "wallet" },
+    { href: "/wallet", label: "Family wallet", icon: "wallet" },
+    { href: "/plans", label: "Recurring plans", icon: "repeat" },
+    { href: "/activity", label: "Payments", icon: "card", exact: true },
+    { href: "/activity/report", label: "Yearly report", icon: "chart" },
   ],
   vendor: [
     { href: "/vendor", label: "Overview", icon: "home", exact: true },

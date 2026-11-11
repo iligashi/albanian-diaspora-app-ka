@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { MapPin, Phone, Users } from "lucide-react"
+import { MapPin, Phone, Users, Cake } from "lucide-react"
 import { EmptyState, PageHeader } from "@/components/shared/primitives"
 import { requireUser } from "@/lib/auth/session"
 import { Recipient } from "@/lib/models"
@@ -39,6 +39,8 @@ export default async function FamilyPage({ searchParams }: { searchParams: Promi
               city: r.city,
               addressLine: r.addressLine,
               notes: r.notes ?? "",
+              birthdayMonth: r.birthday?.month ? String(r.birthday.month) : "",
+              birthdayDay: r.birthday?.day ? String(r.birthday.day) : "",
             }
             return (
               <article key={values.id} className="flex flex-col rounded-xl border bg-card p-5">
@@ -64,6 +66,12 @@ export default async function FamilyPage({ searchParams }: { searchParams: Promi
                       {r.phone}
                     </p>
                   )}
+                  {r.birthday?.month && r.birthday?.day ? (
+                    <p className="flex gap-2">
+                      <Cake className="mt-0.5 size-4 shrink-0" />
+                      {new Date(2024, r.birthday.month - 1, r.birthday.day).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}
+                    </p>
+                  ) : null}
                   {r.notes && <p className="rounded-md bg-muted px-2.5 py-1.5 text-xs">{r.notes}</p>}
                 </div>
                 <div className="mt-auto flex gap-2 pt-4">

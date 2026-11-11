@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { ArrowRight, CalendarDays, Gift, PackageOpen, Receipt, Truck, Users, Wallet, Wrench } from "lucide-react"
+import { ArrowRight, CalendarDays, Gift, PackageOpen, PartyPopper, Receipt, Truck, Users, Wallet, Wrench } from "lucide-react"
 import { ActivityList } from "@/components/shared/activity-list"
 import { EmptyState, PageHeader, Section, StatCard, StatusBadge } from "@/components/shared/primitives"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/session"
 import { formatMoney } from "@/lib/money"
 import { Recipient } from "@/lib/models"
 import { customerActivity, customerOverview } from "@/lib/queries"
+import { upcomingOccasions } from "@/lib/domain/occasions"
 import { formatDate } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Overview" }
@@ -20,11 +21,17 @@ const QUICK = [
 
 export default async function DashboardPage() {
   const user = await requireUser("customer")
-  const [familyCount, overview, activity] = await Promise.all([
-    Recipient.countDocuments({ owner: user.id }),
+  const [family, overview, activity] = await Promise.all([
+    Recipient.find({ owner: user.id }).select("fullName birthday").lean(),
     customerOverview(user.id),
     customerActivity(user.id, 6),
   ])
+  const familyCount = family.length
+  const occasions = upcomingOccasions(
+    new Date(),
+    family.map((r) => ({ id: r._id.toString(), fullName: r.fullName, birthday: r.birthday })),
+    40,
+  ).slice(0, 4)
 
   return (
     <>
@@ -66,6 +73,37 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {occasions.length > 0 && (
+        <section className="mt-6 rounded-xl border bg-card">
+          <header className="flex items-center justify-between gap-4 border-b px-5 py-3.5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <PartyPopper className="size-4 text-primary" /> Coming up
+            </h2>
+            <span className="text-xs text-muted-foreground">Order 3 days ahead so it arrives on the day</span>
+          </header>
+          <ul className="grid divide-y sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
+            {occasions.map((o) => (
+              <li key={o.key} className="flex flex-col gap-2 p-4 sm:border-r last:border-r-0">
+                <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-medium ${o.inDays <= 7 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                  {o.inDays === 0 ? "Today" : o.inDays === 1 ? "Tomorrow" : `In ${o.inDays} days`}
+                </span>
+                <span className="text-sm font-semibold leading-tight">{o.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(o.date)}
+                  {o.approximate ? " (approx.)" : ""}
+                </span>
+                <Link
+                  href={`/gifts?category=${o.suggest}${o.recipient ? `&for=${o.recipient.id}` : ""}`}
+                  className="mt-auto text-xs font-medium text-primary hover:underline"
+                >
+                  {o.recipient ? `Send ${o.recipient.fullName.split(" ")[0]} a gift →` : "Send something home →"}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <Section

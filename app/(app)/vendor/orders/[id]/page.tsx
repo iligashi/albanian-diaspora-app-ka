@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { isValidObjectId } from "mongoose"
+import { ProofGallery, VoiceNote } from "@/components/shared/proof"
+import { ProofUpload } from "../../proof-upload"
 import { DetailList, PageHeader, Section, StatusBadge, Timeline } from "@/components/shared/primitives"
 import { TransitionButtons } from "@/components/shared/transition-buttons"
 import { requireUser } from "@/lib/auth/session"
@@ -38,6 +40,17 @@ export default async function VendorOrderPage({ params }: { params: Promise<{ id
               <div className="p-5">
                 <TransitionButtons actions={actions} run={vendorGiftAction.bind(null, order._id.toString())} withNote />
               </div>
+            </Section>
+          )}
+          {order.voiceNote && (
+            <Section title="Voice message from the family">
+              <VoiceNote id={order.voiceNote} caption="Play this to the recipient when you hand over the gift." />
+            </Section>
+          )}
+          {["accepted", "out_for_delivery", "delivered"].includes(order.status) && (
+            <Section title="Delivery photos">
+              <ProofGallery photos={order.proofPhotos ?? []} />
+              {(order.proofPhotos?.length ?? 0) < 6 && <ProofUpload kind="gift" orderId={order._id.toString()} />}
             </Section>
           )}
           <Section title="Items">

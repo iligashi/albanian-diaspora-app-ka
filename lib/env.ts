@@ -6,6 +6,8 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   PAYMENT_PROVIDER: z.enum(["test"]).default("test"),
+  /** Protects /api/cron/daily (recurring plans, reminders). Leave unset to disable the endpoint. */
+  CRON_SECRET: z.string().min(24, "CRON_SECRET must be at least 24 characters").optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 })
 

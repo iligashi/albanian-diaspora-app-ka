@@ -1,7 +1,8 @@
 import { addDays } from "date-fns"
 import { hashPassword } from "./auth/password"
 import { serviceFeeCents } from "./money"
-import { Bill, Booking, GiftOrder, Offering, Product, Recipient, Transaction, User, Vendor } from "./models"
+import { nextOccurrenceAfter, runAtFor } from "./domain/plans"
+import { Bill, Booking, GiftOrder, Offering, Plan, Product, Recipient, Transaction, User, Vendor, Wallet, WalletEntry } from "./models"
 import { makeReference } from "./utils"
 
 /** Password shared by every demo account. Demo data is only ever created on local/dev databases. */
@@ -10,6 +11,7 @@ export const DEMO_PASSWORD = "demo-pass-2026"
 export const DEMO_ACCOUNTS = {
   admin: "admin@demo.test",
   customer: "arben@demo.test",
+  sibling: "besa@demo.test",
   giftVendor: "flora@demo.test",
   serviceVendor: "pastrim@demo.test",
 } as const
@@ -36,6 +38,11 @@ export async function seedDemoData() {
 
   await person("Platform", "Admin", DEMO_ACCOUNTS.admin, "admin")
   const arben = await person("Arben", "Krasniqi", DEMO_ACCOUNTS.customer, "customer", "Germany")
+  const besa = await person("Besa", "Krasniqi", DEMO_ACCOUNTS.sibling, "customer", "Switzerland")
+  await User.updateOne({ _id: arben._id }, { $set: { referralCode: "ARBEN26" } })
+  // Birthdays a couple of weeks out, so the dashboard's "Coming up" card has something to show.
+  const soon = addDays(new Date(), 12)
+  const later = addDays(new Date(), 33)
 
   const mother = await Recipient.create({
     owner: arben._id,
@@ -44,6 +51,7 @@ export async function seedDemoData() {
     phone: "+383 44 123 456",
     city: "Prishtinë",
     addressLine: "Rr. Agim Ramadani 14, Lagjja Ulpiana",
+    birthday: { month: soon.getMonth() + 1, day: soon.getDate() },
   })
   const grandpa = await Recipient.create({
     owner: arben._id,
@@ -53,6 +61,7 @@ export async function seedDemoData() {
     city: "Drenas",
     addressLine: "Fshati Korroticë e Epërme, nr. 22",
     notes: "Hard of hearing — call his neighbour Fatmir first.",
+    birthday: { month: later.getMonth() + 1, day: later.getDate() },
   })
 
   const vendorAccount = async (
@@ -122,6 +131,7 @@ export async function seedDemoData() {
     { vendor: pastrim._id, title: "Standard home clean (3 hours)", category: "cleaning", priceCents: 4500, durationMinutes: 180, description: "Kitchen, bathroom, floors and dusting for an apartment up to 90 m²." },
     { vendor: pastrim._id, title: "Deep clean", category: "cleaning", priceCents: 9000, durationMinutes: 360, description: "Inside cupboards, oven, windows and balcony." },
     { vendor: elektro._id, title: "Electrician visit", category: "electrical", priceCents: 3000, durationMinutes: 60, description: "Diagnosis and small repairs. Parts billed separately on site." },
+    { vendor: pastrim._id, title: "Wellbeing check-in visit", category: "check_in", priceCents: 2500, durationMinutes: 60, description: "A friendly visit to your parent: a chat, a look around the house, a quick tidy, and a photo report sent to you." },
     { vendor: elektro._id, title: "Plumbing repair", category: "plumbing", priceCents: 3500, durationMinutes: 60, description: "Leaks, taps, boilers and blocked drains." },
   ])
 
@@ -217,6 +227,36 @@ export async function seedDemoData() {
       createdAt: at,
     })),
   )
+
+  // A family wallet the two siblings share, with top-ups from both.
+  const wallet = await Wallet.create({
+    kind: "family",
+    name: "Krasniqi family",
+    owner: arben._id,
+    members: [{ user: arben._id }, { user: besa._id }],
+    balanceCents: 0,
+  })
+  let balance = 0
+  for (const [who, cents, daysAgo] of [[arben, 15000, 20], [besa, 10000, 9], [arben, 5000, 2]] as const) {
+    balance += cents
+    await WalletEntry.create({ wallet: wallet._id, user: who._id, type: "top_up", amountCents: cents, balanceAfterCents: balance, description: "Top-up by card", providerReference: `test_ch_seed_wallet_${daysAgo}`, createdAt: addDays(now, -daysAgo) })
+  }
+  await Wallet.updateOne({ _id: wallet._id }, { $set: { balanceCents: balance } })
+  await Wallet.create({ kind: "personal", name: "My wallet", owner: arben._id, members: [{ user: arben._id }], balanceCents: 0 })
+
+  // Mom's electricity, paid automatically every month from the shared wallet.
+  const nextBill = nextOccurrenceAfter(now, "monthly")
+  await Plan.create({
+    customer: arben._id,
+    kind: "bill",
+    title: `KESCO for ${mother.fullName}`,
+    recipientId: mother._id,
+    interval: "monthly",
+    payWith: wallet._id.toString(),
+    nextOccurrence: nextBill,
+    nextRunAt: runAtFor("bill", nextBill),
+    bill: { provider: "kesco", accountNumber: "1029384756", amountCents: billAmount },
+  })
 
   return true
 }

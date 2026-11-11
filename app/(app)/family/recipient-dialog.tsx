@@ -20,7 +20,11 @@ export type RecipientFormValues = {
   city: string
   addressLine: string
   notes: string
+  birthdayMonth?: string
+  birthdayDay?: string
 }
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 export function RecipientDialog({ recipient, defaultOpen = false }: { recipient?: RecipientFormValues; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -95,6 +99,26 @@ function RecipientForm({ recipient, onDone }: { recipient?: RecipientFormValues;
       </Field>
       <Field label="Notes for vendors" name="notes" error={e.notes} hint="Optional. e.g. which floor, who to call first">
         <Textarea id="notes" name="notes" rows={2} defaultValue={v.notes} />
+      </Field>
+      <Field label="Birthday" name="birthdayMonth" error={e.birthdayMonth ?? e.birthdayDay} hint="Optional. We'll remind you a few days before so a gift arrives on the day.">
+        <div className="grid grid-cols-[1fr_96px] gap-2">
+          <select id="birthdayMonth" name="birthdayMonth" defaultValue={v.birthdayMonth ?? ""} className={selectClass} aria-label="Birthday month">
+            <option value="">Month</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select id="birthdayDay" name="birthdayDay" defaultValue={v.birthdayDay ?? ""} className={selectClass} aria-label="Birthday day">
+            <option value="">Day</option>
+            {Array.from({ length: 31 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </div>
       </Field>
       <DialogFooter>
         <SubmitButton pendingText="Saving…">{recipient ? "Save changes" : "Add family member"}</SubmitButton>
