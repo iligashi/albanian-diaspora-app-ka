@@ -54,7 +54,13 @@ export async function register(_: ActionState, formData: FormData): Promise<Acti
     if (await User.exists({ email: input.email })) {
       throw new AppError("An account with this email already exists. Try signing in.")
     }
+    // An invite code from a friend; both get wallet credit after the first payment.
+    const referrer =
+      input.ref && input.accountType === "customer"
+        ? await User.findOne({ referralCode: input.ref.toUpperCase(), role: "customer", status: "active" }).select("_id").lean()
+        : null
     const user = await User.create({
+      referredBy: referrer?._id,
       firstName: input.firstName,
       lastName: input.lastName,
       email: input.email,

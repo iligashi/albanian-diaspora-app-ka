@@ -2,11 +2,14 @@
 
 import { useActionState, useState } from "react"
 import { Field, FormError, SubmitButton, selectClass } from "@/components/shared/form"
+import { PaymentOptions } from "@/components/shared/payment-options"
 import { PriceBreakdown, TestModeNote } from "@/components/shared/primitives"
+import { VoiceRecorder } from "@/components/shared/voice-recorder"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { formatMoney, serviceFeeCents } from "@/lib/money"
 import type { RecipientOption } from "@/lib/recipient-options"
+import type { WalletOption } from "@/lib/wallet-options"
 import { placeGiftOrderAction } from "../../customer-actions"
 
 function isoDate(daysAhead: number) {
@@ -20,11 +23,15 @@ export function GiftOrderForm({
   recipients,
   servedCities,
   vendorName,
+  wallets,
+  preselect,
 }: {
   product: { id: string; name: string; priceCents: number }
   recipients: RecipientOption[]
   servedCities: string[]
   vendorName: string
+  wallets: WalletOption[]
+  preselect?: string
 }) {
   const [state, action] = useActionState(placeGiftOrderAction, {})
   const v = state.values ?? {}
@@ -47,7 +54,7 @@ export function GiftOrderForm({
           error={e.recipientId}
           hint={eligible.length < recipients.length ? `${vendorName} only delivers to ${servedCities.join(", ")}.` : undefined}
         >
-          <select id="recipientId" name="recipientId" defaultValue={v.recipientId ?? eligible[0]?.id ?? ""} className={selectClass}>
+          <select id="recipientId" name="recipientId" defaultValue={v.recipientId ?? (eligible.some((r) => r.id === preselect) ? preselect : eligible[0]?.id) ?? ""} className={selectClass}>
             {eligible.length === 0 && (
               <option value="" disabled>
                 None of your family live where this shop delivers
@@ -80,6 +87,9 @@ export function GiftOrderForm({
         <Field label="Gift message" name="message" error={e.message} hint={`${message.length}/500 · Printed on a card and delivered with the gift`}>
           <Textarea id="message" name="message" rows={4} maxLength={500} value={message} onChange={(ev) => setMessage(ev.target.value)} placeholder="Gëzuar ditëlindjen…" />
         </Field>
+        <Field label="Voice message" name="voiceNote" error={e.voiceNote}>
+          <VoiceRecorder name="voiceNote" />
+        </Field>
       </div>
 
       <aside className="h-fit space-y-4 rounded-xl border bg-card p-5 lg:sticky lg:top-24">
@@ -91,6 +101,7 @@ export function GiftOrderForm({
           ]}
           total={formatMoney(subtotal + fee)}
         />
+        <PaymentOptions wallets={wallets} totalCents={subtotal + fee} kind="gift" values={v} errors={e} />
         <TestModeNote />
         <SubmitButton className="w-full" disabled={eligible.length === 0} pendingText="Placing order…">
           Pay {formatMoney(subtotal + fee)}

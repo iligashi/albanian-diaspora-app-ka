@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { isValidObjectId } from "mongoose"
 import { Star } from "lucide-react"
+import { ProofGallery } from "@/components/shared/proof"
+import { ProofUpload } from "../../proof-upload"
 import { DetailList, PageHeader, Section, StatusBadge, Timeline } from "@/components/shared/primitives"
 import { TransitionButtons } from "@/components/shared/transition-buttons"
 import { requireUser } from "@/lib/auth/session"
@@ -51,6 +53,12 @@ export default async function VendorBookingPage({ params }: { params: Promise<{ 
                 </div>
                 {booking.review.comment && <p className="mt-2 text-sm">{booking.review.comment}</p>}
               </div>
+            </Section>
+          )}
+          {["in_progress", "completed"].includes(booking.status) && (
+            <Section title="Photos and report for the family">
+              <ProofGallery photos={booking.proofPhotos ?? []} note={booking.reportNote} />
+              {(booking.proofPhotos?.length ?? 0) < 6 && <ProofUpload kind="booking" orderId={booking._id.toString()} />}
             </Section>
           )}
           <Section title="Visit">

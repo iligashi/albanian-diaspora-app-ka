@@ -12,7 +12,7 @@ const TYPES = [
   { value: "vendor", label: "I'm a business", hint: "Sell gifts or services", icon: Store },
 ] as const
 
-export function RegisterForm({ initialType }: { initialType: "customer" | "vendor" }) {
+export function RegisterForm({ initialType, referral }: { initialType: "customer" | "vendor"; referral?: string }) {
   const [state, action] = useActionState(register, {})
   const [type, setType] = useState<"customer" | "vendor">((state.values?.accountType as "vendor") ?? initialType)
   const v = state.values ?? {}
@@ -21,6 +21,7 @@ export function RegisterForm({ initialType }: { initialType: "customer" | "vendo
   return (
     <form action={action} className="mt-8 space-y-4" noValidate>
       <FormError state={state} />
+      {referral ? <input type="hidden" name="ref" value={referral} /> : null}
       <fieldset>
         <legend className="sr-only">Account type</legend>
         <div className="grid grid-cols-2 gap-3">

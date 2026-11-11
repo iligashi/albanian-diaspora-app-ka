@@ -5,13 +5,14 @@ import { EmptyState, PageHeader } from "@/components/shared/primitives"
 import { Button } from "@/components/ui/button"
 import { requireUser } from "@/lib/auth/session"
 import { recipientOptions } from "@/lib/recipient-options"
+import { walletOptions } from "@/lib/wallet-options"
 import { BillForm } from "./bill-form"
 
 export const metadata: Metadata = { title: "Pay a bill" }
 
 export default async function NewBillPage() {
   const user = await requireUser("customer")
-  const recipients = await recipientOptions(user.id)
+  const [recipients, wallets] = await Promise.all([recipientOptions(user.id), walletOptions(user.id)])
 
   return (
     <>
@@ -28,7 +29,7 @@ export default async function NewBillPage() {
           }
         />
       ) : (
-        <BillForm recipients={recipients} />
+        <BillForm recipients={recipients} wallets={wallets} />
       )}
     </>
   )

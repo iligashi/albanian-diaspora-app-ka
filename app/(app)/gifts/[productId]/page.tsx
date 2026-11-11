@@ -10,12 +10,13 @@ import { requireUser } from "@/lib/auth/session"
 import { formatMoney } from "@/lib/money"
 import { Product, Vendor } from "@/lib/models"
 import { recipientOptions } from "@/lib/recipient-options"
+import { walletOptions } from "@/lib/wallet-options"
 import { humanize } from "@/lib/utils"
 import { GiftOrderForm } from "./gift-order-form"
 
 export const metadata: Metadata = { title: "Send a gift" }
 
-export default async function GiftProductPage({ params }: { params: Promise<{ productId: string }> }) {
+export default async function GiftProductPage({ params, searchParams }: { params: Promise<{ productId: string }>; searchParams: Promise<{ for?: string }> }) {
   const user = await requireUser("customer")
   const { productId } = await params
   if (!isValidObjectId(productId)) notFound()
@@ -23,7 +24,7 @@ export default async function GiftProductPage({ params }: { params: Promise<{ pr
   if (!product) notFound()
   const vendor = await Vendor.findOne({ _id: product.vendor, status: "approved" }).lean()
   if (!vendor) notFound()
-  const recipients = await recipientOptions(user.id)
+  const [recipients, wallets, sp] = await Promise.all([recipientOptions(user.id), walletOptions(user.id), searchParams])
 
   return (
     <>
@@ -56,6 +57,8 @@ export default async function GiftProductPage({ params }: { params: Promise<{ pr
           recipients={recipients}
           servedCities={vendor.serviceCities}
           vendorName={vendor.businessName}
+          wallets={wallets}
+          preselect={sp.for}
         />
       )}
     </>

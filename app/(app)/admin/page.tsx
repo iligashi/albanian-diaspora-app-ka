@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { startOfMonth } from "date-fns"
 import { CalendarDays, Gift, Receipt, Store, Users, Wallet } from "lucide-react"
+import { RunPlansButton } from "./run-plans-button"
 import { PageHeader, Section, StatCard } from "@/components/shared/primitives"
 import { requireUser } from "@/lib/auth/session"
 import { formatMoney } from "@/lib/money"
@@ -42,7 +43,11 @@ export default async function AdminHome() {
 
   return (
     <>
-      <PageHeader title="Operations" description="Everything that needs a person, plus how the month is going." />
+      <PageHeader
+        title="Operations"
+        description="Everything that needs a person, plus how the month is going."
+        actions={<RunPlansButton />}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link href="/admin/bills" className="flex items-center justify-between rounded-xl border bg-card p-5 hover:border-primary/40">
